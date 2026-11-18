@@ -1,0 +1,17 @@
+id = "rangedpumps"
+name = "Ranged Pumps"
+version = "0.2.0"
+description = """A pump that drains still water and lava sources in a configurable range below it, one bucket at a time, into one 32-bucket tank that feeds its neighbours."""
+authors = ["Refined Mods", "AdLf0208"]
+# A native mod: Rust in src/, compiled by the launcher against the game build [native] pins,
+# beside data/ and assets/. The id is the resource namespace and the only identity: Cargo's
+# package name and version are not the mod's.
+api = "0.2"
+side = "both"
+# registries: "May add blocks, items, mob effects and entity types to your worlds".
+capabilities = ["registries"]
+
+[native]
+game = "26.3"
+horizon = "0b14f8acfd97fa2c750e42795249dcc981178ca4"
+mixins = "e59da9094f0c2fdda6c627fe9eff22dec6a906f0"
