@@ -1,56 +1,67 @@
-# Ranged Pumps for Horizon
+# Ranged Pumps — a Horizon port
 
-A native Horizon port of **Ranged Pumps 1.3.0** (`refinedmods/rangedpumps`,
-**MIT**): a pump block that walks a scan through still source blocks in a
-configured radius, drains each one into a 32-bucket internal tank, and pushes
-the tank into adjacent fluid handlers.
+**Ranged Pumps** is a Minecraft mod. Ranged Pumps is a simple mod that adds a pump that pumps liquids in a range. This repository is a **port of it to [Horizon](https://github.com/horizon-rust/horizon)**, the Rust engine for Minecraft Java 26.3. It carries the complete source of the port plus the content files it ships, and installs as a single `.hmod` package.
 
-**LOCAL-ONLY** until the maintainer approves publishing (ARCHITECTURE.md §8).
+Upstream: [refinedmods/rangedpumps](https://github.com/refinedmods/rangedpumps) — licence **MIT**.
 
-- Format: the **SDK layout** (mod API 0.2, launcher ≥ 0.2.70): one flat
-  `rangedpumps.hmod` — `horizon-mod.toml` + `Cargo.toml` + `src/` + `assets/` +
-  `data/`.
-- SDK: nightly **`0b14f8acfd97fa2c750e42795249dcc981178ca4`**, mixins
-  **`e59da9094f0c2fdda6c627fe9eff22dec6a906f0`**, game 26.3.
-- Class/tier: `content` / `machines`; approach per
-  `horizon/docs/modpacks.md` (block entity + fluid capability + tick, not a
-  data-only carry).
-- Behaviour, gaps and verification: [notes.md](notes.md) — including
-  `## Migration to the SDK format`; upstream notes: [FINDINGS.md](FINDINGS.md);
-  licence: [LICENSE-NOTICE.md](LICENSE-NOTICE.md).
+| | |
+|---|---|
+| Upstream mod | Ranged Pumps ([source](https://github.com/refinedmods/rangedpumps)) |
+| Ported to | Horizon 0b14f8a, Minecraft Java 26.3, mod API `0.2` |
+| Package | `rangedpumps.hmod` (install it with the Horizon launcher) |
+| Licence | **MIT** — the upstream mod's licence; see [Licence and credit](#licence-and-credit) |
 
-## Layout
+## What this port implements
 
-```text
-horizon-mod.toml                   The only manifest: id, version, api 0.2, [native] pins
-Cargo.toml                         The crate the launcher compiles (horizon-mod-api from .horizon/sdk/)
-src/lib.rs                         The one #[mod_api::horizon_mod] impl Hooks + the pump Parts
-src/runtime.rs                     Pure scan/tank logic and tests (this campaign's rule)
-assets/rangedpumps/                blockstate, block/item models, textures, lang
-data/rangedpumps/                  block definition, creative tab, recipe, loot table
-rangedpumps.hmod                   The built package (port root, never target/)
+- **Scan.** `range` starts at `-1` (the single column directly **below** the
+- **Drain.** Only `minecraft:water`/`minecraft:lava` with `level=0` (a still
+- **Tank.** One **32,000 mB** tank, one fluid at a time, declared through
+- **Output.** At the end of each of the pump's ticks, the neighbouring
+- **Replacement.** The drained source becomes air and then `minecraft:stone`
+- **Readout.** Right click sends the state (scanning position/range, full,
+- **Range setting.** The ring radius is per block, saved as `configuredRange`
+
+## Not yet ported
+
+- **No energy (FE) gating.** The SDK has energy capabilities
+- **No redstone pause.** A part could read `has_neighbor_signal`, but the
+- **Range is per block** (`configuredRange`, default 64, `/rangedpumps range`)
+- **No config file** for `speed`, tank capacity or the replacement block; the
+- **No custom renderer**; the 1.3.0 cube model and textures are carried.
+- **No pickaxe tag** — the 1.3.0 jar omits it; `requires_tool` is false.
+- **No in-game re-proof at this build** (trap 10): the tank, the drain, the
+- **The readout is `use_without_item`** (empty hand). That is upstream's own
+
+## Installing
+
+1. Install the [Horizon launcher](https://github.com/horizon-rust/horizon/releases) (0.2.70 or newer).
+2. Add `rangedpumps.hmod` to the instance's mods.
+3. The package is pinned to a specific Horizon build; the launcher checks that pin.
+
+## Licence and credit
+
+Ranged Pumps was created by its upstream authors; the code, models and assets in the original mod
+remain theirs and are used here under **MIT**. The Rust in this repository is a clean-room
+rewrite for Horizon, not a translation of the original source.
+
+- `LICENSE` — the upstream licence text.
+- `LICENSE-NOTICE.md` — what this port carries and where it came from.
+- The upstream project: https://github.com/refinedmods/rangedpumps
+
+## Technical details
+
+```
+horizon-mod.toml   package manifest (id, version, api, [native] pin)
+Cargo.toml         the crate; depends on `horizon-mod-api` from the fetched SDK
+src/               lib.rs (the one `impl Hooks`), runtime.rs (pure logic + tests), glue
+assets/ data/      the content the package ships
+tools/             content generators and the e2e scenario
 ```
 
-Retired by the 2026-11-17 mod-API merge (#16941) and no longer present:
-`mixins/rangedpumps/`, `horizon-mixin.toml`, `horizon-native.json`,
-`compatibility.json`, `rust-toolchain.toml`, `content/` and the embedded-content
-injection. Their last state is kept under
-`ports/_shared/evidence/rangedpumps/retired-hnmod/`.
+- Build: `cargo horizon-mod build` (packages; it does not compile against the game).
+- Test: `cargo test`, `cargo clippy --all-targets -- -D warnings`.
+- In-game: `ports/tools/launcher-game.sh run rangedpumps` in the campaign tree, or install the
+  `.hmod` and play; the harness scenario is `tools/e2e.sh`.
 
-## Build and verify
-
-```sh
-# fetch the pinned SDK into .horizon/sdk/ (once per clone; any `cargo horizon-mod` command does it)
-cd ports/rangedpumps && cargo horizon-mod check
-
-ports/tools/build-slot.sh run --job sdk-rp --port ports/rangedpumps --step check -- \
-  bash -c 'cd ports/rangedpumps && cargo test && cargo clippy --all-targets -- -D warnings'
-ports/tools/build-slot.sh run --job sdk-rp --port ports/rangedpumps --step build -- \
-  bash -c 'cd ports/rangedpumps && cargo horizon-mod build && cp target/horizon-mod/rangedpumps.hmod .'
-cargo horizon-mod check rangedpumps.hmod && cargo horizon-mod fits rangedpumps.hmod
-```
-
-In game: right-click a pump with an empty hand for its state and tank,
-`/rangedpumps info <x> <y> <z>` for the same, and
-`/rangedpumps range <x> <y> <z> <range>` (op 2) to set its ring radius
-(default 64).
+This repository is generated from the campaign's port at `ports/rangedpumps/`; the port's own
+`notes.md` is the full record (decisions, traps, evidence).
